@@ -10,6 +10,10 @@ RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
 
 WORKDIR /app
 
+# .npmrc carries `shamefully-hoist=true`, which hoists @prisma/client into the
+# root node_modules so `prisma generate` (schema lives at repo root) can resolve it.
+# Without this file present at install time, Prisma fails with "Could not resolve @prisma/client".
+COPY .npmrc ./
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/types/package.json ./packages/types/
