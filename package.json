@@ -1,0 +1,41 @@
+{
+  "name": "civicops",
+  "version": "1.0.0",
+  "description": "Multi-Tenant Civic Operations & Complaint Management Platform",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.4",
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "dev:backend": "pnpm --filter @civicops/backend dev",
+    "dev:frontend": "pnpm --filter @civicops/frontend dev",
+    "build": "pnpm run --parallel build",
+    "build:backend": "pnpm --filter @civicops/backend build",
+    "build:frontend": "pnpm --filter @civicops/frontend build",
+    "lint": "pnpm run --parallel lint",
+    "test": "pnpm run --parallel test",
+    "test:backend": "pnpm --filter @civicops/backend test",
+    "test:frontend": "pnpm --filter @civicops/frontend test",
+    "db:migrate": "pnpm --filter @civicops/backend prisma:migrate",
+    "db:generate": "pnpm --filter @civicops/backend prisma:generate",
+    "db:seed": "pnpm --filter @civicops/backend prisma:seed",
+    "db:studio": "pnpm --filter @civicops/backend prisma:studio",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "clean": "pnpm run --parallel clean"
+  },
+  "keywords": [
+    "civicops",
+    "civic",
+    "complaints",
+    "municipal",
+    "multi-tenant",
+    "nestjs",
+    "nextjs"
+  ],
+  "author": "CivicOps Team",
+  "license": "MIT"
+}

@@ -1,0 +1,89 @@
+# ============================================================
+# CivicOps - Production stack for a single EC2 instance
+# Runs: PostgreSQL + Redis + Backend (NestJS) + Frontend (Next.js)
+# Usage on EC2:  docker compose -f docker-compose.prod.yml up -d --build
+# ============================================================
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: civicops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: civicops
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-civicops_prod_password}
+      POSTGRES_DB: civicops
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U civicops']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: civicops-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: civicops-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://civicops:${POSTGRES_PASSWORD:-civicops_prod_password}@postgres:5432/civicops?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-this-access-secret-in-production-min32}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-refresh-secret-in-production-min32}
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CORS_ORIGIN: ${PUBLIC_URL:-http://localhost}
+      AI_PROVIDER: gemini
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - '4000:4000'
+    # Run migrations + seed, then start the server
+    command: >
+      sh -c "npx prisma migrate deploy --schema=./prisma/schema.prisma &&
+             (npx ts-node prisma/seed.ts || node prisma/seed.js || echo 'seed skipped') &&
+             node dist/main.js"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: civicops-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+      # Server-side proxy target (Next.js rewrites /api/v1 -> backend)
+      NEXT_PUBLIC_API_URL: http://backend:4000
+    ports:
+      - '80:3000'
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
