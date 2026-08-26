@@ -31,6 +31,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/frontend/node_modules ./apps/frontend/node_modules
 COPY . .
 
+# The Next.js rewrite proxy target (/api/v1 -> backend) is baked in at BUILD time.
+# Default to the compose service hostname so the server-side proxy reaches the backend.
+ARG NEXT_PUBLIC_API_URL=http://backend:4000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 RUN pnpm --filter @civicops/frontend build
 
 # Stage 3: Production
