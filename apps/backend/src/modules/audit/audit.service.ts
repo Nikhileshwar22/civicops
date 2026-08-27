@@ -20,6 +20,11 @@ export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
 
   async log(entry: AuditLogEntry) {
+    // Skip audit log if tenantId is missing or not a valid UUID — prevents FK violations
+    // when system events fire without a tenant context (e.g. logout before token decoded).
+    if (!entry.tenantId || entry.tenantId === 'system' || entry.tenantId.length < 10) {
+      return;
+    }
     try {
       await this.prisma.auditLog.create({
         data: entry,
@@ -90,9 +95,10 @@ export class AuditService {
 
   @OnEvent('auth.logout')
   handleAuthLogout(payload: any) {
+    if (!payload.tenantId) return; // tenantId not always available on logout
     this.log({
       userId: payload.userId,
-      tenantId: payload.tenantId || 'system',
+      tenantId: payload.tenantId,
       action: 'AUTH_LOGOUT',
       resourceType: 'USER',
       resourceId: payload.userId,

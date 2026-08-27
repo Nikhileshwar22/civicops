@@ -245,7 +245,9 @@ export class AuthService {
     // Invalidate user cache
     await this.redisService.del(`user:${userId}`);
 
-    this.eventEmitter.emit('auth.logout', { userId });
+    // Look up tenantId so audit log has proper FK
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { tenantId: true } });
+    this.eventEmitter.emit('auth.logout', { userId, tenantId: user?.tenantId });
 
     return { message: 'Logged out successfully' };
   }
