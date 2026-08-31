@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { apiGet, apiPost, apiPatch } from '@/lib/api-client';
 import { getAccessToken } from '@/lib/auth';
 
@@ -20,6 +21,7 @@ interface Complaint {
   citizen?: { firstName: string; lastName: string };
   resolution?: string;
   resolutionEvidence?: string[];
+  attachments?: { id: string; fileName: string; url: string; mimeType: string }[];
 }
 
 interface UploadedProof {
@@ -33,8 +35,9 @@ export default function WorkerComplaintsPage() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'active' | 'completed'>('active');
+  const searchParams = useSearchParams();
+  const search = searchParams.get('search') || '';
 
-  // Resolve modal
   const [resolveTarget, setResolveTarget] = useState<Complaint | null>(null);
   const [resolutionText, setResolutionText] = useState('');
   const [proofFiles, setProofFiles] = useState<UploadedProof[]>([]);
@@ -44,13 +47,15 @@ export default function WorkerComplaintsPage() {
 
   const fetchComplaints = () => {
     setLoading(true);
-    apiGet<any>('/complaints?limit=100&sortOrder=desc')
+    const params = new URLSearchParams({ limit: '100', sortOrder: 'desc' });
+    if (search) params.set('search', search);
+    apiGet<any>(`/complaints?${params.toString()}`)
       .then((data) => setComplaints(data.data || data || []))
       .catch(console.error)
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchComplaints(); }, []);
+  useEffect(() => { fetchComplaints(); }, [search]);
 
   const activeComplaints = complaints.filter((c) => ['ASSIGNED', 'IN_PROGRESS', 'REOPENED'].includes(c.status));
   const completedComplaints = complaints.filter((c) => ['RESOLVED', 'CLOSED'].includes(c.status));
@@ -142,8 +147,8 @@ export default function WorkerComplaintsPage() {
   };
 
   const getPriorityColor = (p: string) => {
-    const m: Record<string, string> = { LOW: 'border-green-400', MEDIUM: 'border-blue-400', HIGH: 'border-amber-400', CRITICAL: 'border-red-400' };
-    return m[p] || 'border-gray-300';
+    const m: Record<string, string> = { LOW: 'bg-green-100 text-green-700', MEDIUM: 'bg-blue-100 text-blue-700', HIGH: 'bg-amber-100 text-amber-700', CRITICAL: 'bg-red-100 text-red-700' };
+    return m[p] || 'bg-gray-100 text-gray-700';
   };
   const getStatusColor = (s: string) => {
     const m: Record<string, string> = { ASSIGNED: 'bg-purple-100 text-purple-700', IN_PROGRESS: 'bg-amber-100 text-amber-700', RESOLVED: 'bg-green-100 text-green-700', CLOSED: 'bg-gray-200 text-gray-600', REOPENED: 'bg-red-100 text-red-700' };
@@ -173,10 +178,24 @@ export default function WorkerComplaintsPage() {
         <div className="bg-white rounded-xl border p-16 text-center text-gray-400"><div className="text-4xl mb-3">✅</div><p className="text-sm">No {tab} tasks</p></div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {shown.map((c) => (
-            <div key={c.id} className={`bg-white rounded-xl border-t-4 ${getPriorityColor(c.priority)} border shadow-sm p-5 flex flex-col`}>
+          {shown.map((c) => {
+            const images = (c.attachments || []).filter((a) => a.mimeType?.startsWith('image/'));
+            return (
+            <div key={c.id} className="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
+              {/* Complaint original photos */}
+              {images.length > 0 && (
+                <div className="flex gap-0.5 h-28">
+                  {images.slice(0, 3).map((img, i) => (
+                    <img key={i} src={img.url} alt={img.fileName} className={`object-cover ${images.length === 1 ? 'w-full' : images.length === 2 ? 'w-1/2' : 'w-1/3'}`} />
+                  ))}
+                </div>
+              )}
+              <div className="p-5 flex flex-col flex-1">
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${getStatusColor(c.status)}`}>{c.status.replace('_', ' ')}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${getPriorityColor(c.priority)}`}>{c.priority}</span>
+              </div>
+              <div className="flex justify-end mb-1">
                 <span className="text-[10px] text-gray-400">{c.complaintNumber}</span>
               </div>
               <h3 className="font-semibold text-gray-900 text-sm">{c.title}</h3>
@@ -208,8 +227,10 @@ export default function WorkerComplaintsPage() {
                   <span className="flex-1 py-2 text-xs font-medium text-green-600 bg-green-50 rounded-lg text-center">✓ Completed</span>
                 )}
               </div>
+              </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

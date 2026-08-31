@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { apiGet } from '@/lib/api-client';
+
+interface Attachment { id: string; fileName: string; url: string; mimeType: string; }
 
 interface Complaint {
   id: string;
@@ -18,6 +21,8 @@ interface Complaint {
   department?: { name: string };
   assignedWorker?: { firstName: string; lastName: string };
   assignedOfficer?: { firstName: string; lastName: string };
+  attachments?: Attachment[];
+  resolutionEvidence?: string[];
 }
 
 interface Zone {
@@ -33,24 +38,25 @@ export default function CommissionerProjectStatusPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const search = searchParams.get('search') || '';
 
-  // Load zones once for the dropdown
   useEffect(() => {
     apiGet<Zone[]>('/geography/zones').then(setZones).catch(console.error);
   }, []);
 
-  // Load complaints when filters change
   useEffect(() => {
     const params = new URLSearchParams({ limit: '50', sortOrder: 'desc' });
     if (zoneFilter) params.set('zoneId', zoneFilter);
     if (statusFilter) params.set('status', statusFilter);
+    if (search) params.set('search', search);
 
     setLoading(true);
     apiGet<any>(`/complaints?${params.toString()}`)
       .then((data) => setComplaints(data.data || data || []))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [zoneFilter, statusFilter]);
+  }, [zoneFilter, statusFilter, search]);
 
   const getStatusColor = (s: string) => {
     const m: Record<string, string> = {
@@ -66,8 +72,8 @@ export default function CommissionerProjectStatusPage() {
   };
 
   const getPriorityColor = (p: string) => {
-    const m: Record<string, string> = { LOW: 'border-green-400', MEDIUM: 'border-blue-400', HIGH: 'border-amber-400', CRITICAL: 'border-red-400' };
-    return m[p] || 'border-gray-300';
+    const m: Record<string, string> = { LOW: 'bg-green-100 text-green-700', MEDIUM: 'bg-blue-100 text-blue-700', HIGH: 'bg-amber-100 text-amber-700', CRITICAL: 'bg-red-100 text-red-700' };
+    return m[p] || 'bg-gray-100 text-gray-700';
   };
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -124,8 +130,28 @@ export default function CommissionerProjectStatusPage() {
       ) : viewMode === 'card' ? (
         /* CARD VIEW - shows zone, area, assigned worker */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {complaints.map((c) => (
-            <div key={c.id} className={`bg-white rounded-xl border-t-4 ${getPriorityColor(c.priority)} border shadow-sm p-5`}>
+          {complaints.map((c) => {
+            const images = (c.attachments || []).filter((a) => a.mimeType?.startsWith('image/'));
+            const proofImages = c.resolutionEvidence || [];
+            return (
+              <div key={c.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              {/* Complaint photos */}
+              {images.length > 0 && (
+                <div className="flex gap-0.5 h-28">
+                  {images.slice(0, 3).map((img, i) => (
+                    <img key={i} src={img.url} alt={img.fileName} className={`object-cover ${images.length === 1 ? 'w-full' : images.length === 2 ? 'w-1/2' : 'w-1/3'}`} />
+                  ))}
+                </div>
+              )}
+              {/* Resolution proof */}
+              {proofImages.length > 0 && (
+                <div className="flex gap-0.5 h-20">
+                  {proofImages.slice(0, 3).map((url, i) => (
+                    <img key={i} src={url} alt="proof" className={`object-cover ${proofImages.length === 1 ? 'w-full' : proofImages.length === 2 ? 'w-1/2' : 'w-1/3'}`} />
+                  ))}
+                </div>
+              )}
+              <div className="p-5">
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${getStatusColor(c.status)}`}>{c.status.replace('_', ' ')}</span>
                 <span className="text-[10px] text-gray-400">{c.complaintNumber}</span>
@@ -153,12 +179,17 @@ export default function CommissionerProjectStatusPage() {
                 </div>
               </div>
 
-              <div className="mt-3 pt-3 border-t flex items-center justify-between text-[11px] text-gray-400">
-                <span>{c.priority} priority</span>
-                <span>{formatDate(c.createdAt)}</span>
+              <div className="mt-3 pt-3 border-t flex items-center justify-between text-[11px]">
+                <span className={`px-2 py-0.5 rounded-full font-medium ${getPriorityColor(c.priority)}`}>{c.priority}</span>
+                <div className="flex items-center gap-2 text-gray-400">
+                  {images.length > 0 && <span>📷 {images.length}</span>}
+                  <span>{formatDate(c.createdAt)}</span>
+                </div>
+              </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         /* LIST VIEW - shows zone, area, worker in a table */
