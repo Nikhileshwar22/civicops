@@ -267,6 +267,7 @@ async function main() {
   // ======== SAMPLE COMPLAINTS ========
   const citizen1 = await prisma.user.findFirst({ where: { email: 'citizen1@example.com', tenantId: tenant.id } });
   const citizen2 = await prisma.user.findFirst({ where: { email: 'citizen2@example.com', tenantId: tenant.id } });
+  const citizen3 = await prisma.user.findFirst({ where: { email: 'citizen3@example.com', tenantId: tenant.id } });
   const wardOfficer = await prisma.user.findFirst({ where: { email: 'ward57.officer@ghmc.gov.in', tenantId: tenant.id } });
   const worker1 = await prisma.user.findFirst({ where: { email: 'worker1@ghmc.gov.in', tenantId: tenant.id } });
 
@@ -278,7 +279,7 @@ async function main() {
         description: 'There is a very large pothole on the main road near bus stop #42 in ward 57. It is causing accidents and traffic jams. Multiple vehicles have been damaged.',
         category: 'POTHOLES',
         priority: 'HIGH',
-        status: 'ASSIGNED',
+        status: 'RESOLVED',
         latitude: 17.385,
         longitude: 78.4867,
         address: 'Main Road, Near Bus Stop #42, Ward 57',
@@ -291,6 +292,11 @@ async function main() {
         departmentId: deptRecords['RB']?.id,
         tenantId: tenant.id,
         slaDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        resolution: 'Pothole filled with bitumen and road surface repaired. Area cordoned during repair.',
+        resolvedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+        resolutionEvidence: [
+          'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Pothole_filled.jpg/640px-Pothole_filled.jpg',
+        ],
       },
       {
         complaintNumber: 'CMP-2401-00002',
@@ -298,11 +304,13 @@ async function main() {
         description: 'The garbage in our area has not been collected for the past 3 days. It is causing a terrible smell and health concerns for residents. Stray dogs are tearing through the garbage bags.',
         category: 'GARBAGE',
         priority: 'MEDIUM',
-        status: 'RECEIVED',
+        status: 'ASSIGNED',
         latitude: 17.4123,
         longitude: 78.4456,
         address: 'Colony Street 5, Ward 57',
         citizenId: citizen2.id,
+        assignedOfficerId: wardOfficer?.id,
+        assignedWorkerId: worker1?.id,
         wardId: wardRecords[57]?.id,
         zoneId: zoneRecords['Z03']?.id,
         circleId: circleRecords['C05']?.id,
@@ -312,7 +320,7 @@ async function main() {
       },
       {
         complaintNumber: 'CMP-2401-00003',
-        title: 'Street light not working',
+        title: 'Street light not working near park entrance',
         description: 'The street light at the corner of MG Road and Park Avenue has not been working for over a week. The area is very dark at night and unsafe for pedestrians.',
         category: 'STREET_LIGHTS',
         priority: 'LOW',
@@ -328,6 +336,9 @@ async function main() {
         tenantId: tenant.id,
         resolution: 'Street light bulb replaced and wiring fixed. Light is now functioning normally.',
         resolvedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        resolutionEvidence: [
+          'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
+        ],
       },
       {
         complaintNumber: 'CMP-2401-00004',
@@ -341,6 +352,7 @@ async function main() {
         address: 'Residential Block B, Ward 50',
         citizenId: citizen2.id,
         assignedOfficerId: wardOfficer?.id,
+        assignedWorkerId: worker1?.id,
         wardId: wardRecords[50]?.id,
         zoneId: zoneRecords['Z03']?.id,
         circleId: circleRecords['C05']?.id,
@@ -349,17 +361,115 @@ async function main() {
         slaDeadline: new Date(Date.now() + 4 * 60 * 60 * 1000),
         slaBreached: false,
       },
+      {
+        complaintNumber: 'CMP-2401-00005',
+        title: 'Broken footpath causing injuries to pedestrians',
+        description: 'The footpath tiles on Jubilee Hills Road No. 36 are broken and uneven. Several elderly residents have tripped and injured themselves. Requires immediate repair.',
+        category: 'ROAD_DAMAGE',
+        priority: 'HIGH',
+        status: 'RECEIVED',
+        latitude: 17.4310,
+        longitude: 78.4075,
+        address: 'Jubilee Hills Road No. 36, Ward 10',
+        citizenId: citizen3 ? citizen3.id : citizen1.id,
+        wardId: wardRecords[1]?.id,
+        zoneId: zoneRecords['Z01']?.id,
+        circleId: circleRecords['C01']?.id,
+        departmentId: deptRecords['RB']?.id,
+        tenantId: tenant.id,
+        slaDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+      {
+        complaintNumber: 'CMP-2401-00006',
+        title: 'Open drain causing mosquito breeding near school',
+        description: 'There is an open drainage channel near Govt Primary School on Tank Bund Road that is stagnant and breeding mosquitoes. Children are at risk of malaria and dengue.',
+        category: 'DRAINAGE',
+        priority: 'HIGH',
+        status: 'ASSIGNED',
+        latitude: 17.4094,
+        longitude: 78.4772,
+        address: 'Tank Bund Road, Near Govt Primary School, Ward 57',
+        citizenId: citizen1.id,
+        assignedOfficerId: wardOfficer?.id,
+        wardId: wardRecords[57]?.id,
+        zoneId: zoneRecords['Z03']?.id,
+        circleId: circleRecords['C05']?.id,
+        departmentId: deptRecords['DRN']?.id,
+        tenantId: tenant.id,
+        slaDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+      {
+        complaintNumber: 'CMP-2401-00007',
+        title: 'Overgrown trees blocking street lights and road',
+        description: 'Trees on the median of Banjara Hills Road have grown excessively and are blocking street lights and encroaching onto the road. Poses risk during monsoon.',
+        category: 'PARKS_MAINTENANCE',
+        priority: 'MEDIUM',
+        status: 'RECEIVED',
+        latitude: 17.4156,
+        longitude: 78.4483,
+        address: 'Banjara Hills Road No. 12, Ward 15',
+        citizenId: citizen2.id,
+        wardId: wardRecords[1]?.id,
+        zoneId: zoneRecords['Z01']?.id,
+        circleId: circleRecords['C01']?.id,
+        departmentId: deptRecords['PG']?.id,
+        tenantId: tenant.id,
+        slaDeadline: new Date(Date.now() + 72 * 60 * 60 * 1000),
+      },
     ];
+
+    // Photo sets for complaints — using public domain/CC images of real civic issues
+    const complaintPhotos: Record<string, string[]> = {
+      'CMP-2401-00001': [
+        'https://images.unsplash.com/photo-1517578541-1326f3d7efb6?w=600',
+        'https://images.unsplash.com/photo-1508919801845-fc2ae1bc2a28?w=600',
+      ],
+      'CMP-2401-00002': [
+        'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=600',
+      ],
+      'CMP-2401-00003': [
+        'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=600',
+      ],
+      'CMP-2401-00004': [
+        'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600',
+        'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=600',
+      ],
+      'CMP-2401-00005': [
+        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600',
+      ],
+      'CMP-2401-00006': [
+        'https://images.unsplash.com/photo-1609252509602-9e29f044d00d?w=600',
+      ],
+      'CMP-2401-00007': [
+        'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=600',
+      ],
+    };
 
     for (const complaint of sampleComplaints) {
       const existing = await prisma.complaint.findUnique({
         where: { complaintNumber: complaint.complaintNumber },
       });
       if (!existing) {
-        await prisma.complaint.create({ data: complaint });
+        const created = await prisma.complaint.create({ data: complaint });
+
+        // Add photo attachments - store full URL as objectKey for seed data (served as-is)
+        const photos = complaintPhotos[complaint.complaintNumber] || [];
+        for (let i = 0; i < photos.length; i++) {
+          await prisma.complaintAttachment.create({
+            data: {
+              complaintId: created.id,
+              tenantId: tenant.id,
+              uploadedBy: complaint.citizenId,
+              fileName: `photo-${i + 1}.jpg`,
+              objectKey: photos[i],  // store the full URL as objectKey for seed images
+              mimeType: 'image/jpeg',
+              fileSize: 204800,
+            },
+          });
+        }
       }
     }
-    console.log(`Complaints: ${sampleComplaints.length} sample complaints created`);
+    console.log(`Complaints: ${sampleComplaints.length} sample complaints created with photos`);
   }
 
   console.log('Seed completed successfully!');

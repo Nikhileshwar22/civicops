@@ -8,9 +8,12 @@ import { apiGet } from '@/lib/api-client';
 interface Attachment {
   id: string;
   fileName: string;
-  url: string;
+  objectKey: string;
   mimeType: string;
 }
+
+const getAttachmentUrl = (a: Attachment) =>
+  a.objectKey.startsWith('http') ? a.objectKey : `/api/v1/attachments/file/${a.objectKey}`;
 
 interface Complaint {
   id: string;
@@ -131,7 +134,7 @@ export default function CitizenComplaintsPage() {
                 {images.length > 0 && (
                   <div className="flex gap-0.5 h-28 overflow-hidden">
                     {images.slice(0, 3).map((img, i) => (
-                      <img key={i} src={img.url} alt={img.fileName} className={`object-cover ${images.length === 1 ? 'w-full' : images.length === 2 ? 'w-1/2' : 'w-1/3'}`} />
+                      <img key={i} src={getAttachmentUrl(img)} alt={img.fileName} className={`object-cover ${images.length === 1 ? 'w-full' : images.length === 2 ? 'w-1/2' : 'w-1/3'}`} />
                     ))}
                   </div>
                 )}
@@ -187,7 +190,7 @@ export default function CitizenComplaintsPage() {
                   <tr key={c.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/citizen/complaints/${c.id}`}>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        {images[0] && <img src={images[0].url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
+                        {images[0] && <img src={getAttachmentUrl(images[0])} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
                         <div><div className="font-medium text-gray-900">{c.title}</div><div className="text-[11px] text-gray-400">{c.complaintNumber}</div></div>
                       </div>
                     </td>

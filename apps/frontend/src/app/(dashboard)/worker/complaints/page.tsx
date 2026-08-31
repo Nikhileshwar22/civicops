@@ -21,8 +21,11 @@ interface Complaint {
   citizen?: { firstName: string; lastName: string };
   resolution?: string;
   resolutionEvidence?: string[];
-  attachments?: { id: string; fileName: string; url: string; mimeType: string }[];
+  attachments?: { id: string; fileName: string; objectKey: string; mimeType: string }[];
 }
+
+const getAttachmentUrl = (a: { objectKey: string }) =>
+  a.objectKey.startsWith('http') ? a.objectKey : `/api/v1/attachments/file/${a.objectKey}`;
 
 interface UploadedProof {
   objectKey: string;
@@ -186,7 +189,7 @@ export default function WorkerComplaintsPage() {
               {images.length > 0 && (
                 <div className="flex gap-0.5 h-28">
                   {images.slice(0, 3).map((img, i) => (
-                    <img key={i} src={img.url} alt={img.fileName} className={`object-cover ${images.length === 1 ? 'w-full' : images.length === 2 ? 'w-1/2' : 'w-1/3'}`} />
+                    <img key={i} src={getAttachmentUrl(img)} alt={img.fileName} className={`object-cover ${images.length === 1 ? 'w-full' : images.length === 2 ? 'w-1/2' : 'w-1/3'}`} />
                   ))}
                 </div>
               )}

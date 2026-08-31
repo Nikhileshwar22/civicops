@@ -265,7 +265,7 @@ export class ComplaintRepository {
       zone: { select: { id: true, name: true } },
       circle: { select: { id: true, name: true } },
       ward: { select: { id: true, name: true, number: true } },
-      attachments: { select: { id: true, fileName: true, objectKey: true, mimeType: true, url: true } },
+      attachments: { select: { id: true, fileName: true, objectKey: true, mimeType: true } },
     };
   }
 
