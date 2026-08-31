@@ -60,10 +60,11 @@ export class ComplaintRepository {
   }
 
   async findById(id: string) {
-    return this.prisma.complaint.findUnique({
+    const complaint = await this.prisma.complaint.findUnique({
       where: { id },
       include: this.detailedInclude(),
     });
+    return this.mapAttachmentUrls(complaint);
   }
 
   async findAll(filter: any, tenantId: string) {
@@ -128,7 +129,7 @@ export class ComplaintRepository {
     ]);
 
     return {
-      data,
+      data: data.map((c) => this.mapAttachmentUrls(c)),
       meta: this.prisma.buildPaginationMeta(total, filter.page, filter.limit),
     };
   }
@@ -254,6 +255,20 @@ export class ComplaintRepository {
     const year = date.getFullYear().toString().slice(-2);
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     return `CMP-${year}${month}-${(count + 1).toString().padStart(5, '0')}`;
+  }
+
+  private mapAttachmentUrls(complaint: any): any {
+    if (!complaint) return complaint;
+    if (!complaint.attachments) return complaint;
+    return {
+      ...complaint,
+      attachments: complaint.attachments.map((a: any) => ({
+        ...a,
+        url: a.objectKey?.startsWith('http')
+          ? a.objectKey
+          : `/api/v1/attachments/file/${a.objectKey}`,
+      })),
+    };
   }
 
   private defaultInclude() {
